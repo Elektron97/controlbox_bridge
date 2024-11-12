@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import rospy
-from ros_pressure_interface.pressure_interface import Pressure_Interface
+from controlbox_bridge.pressure_interface import Pressure_Interface
 
 def main():
-	rospy.init_node("control_box_interface", anonymous=True)
+	rospy.init_node("controlbox_bridge", anonymous=True)
 	Pressure_Interface()
 	rospy.spin()
 

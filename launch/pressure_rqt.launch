@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <!-- Pressure Interface Launch File -->
-    <include file="$(find ros_pressure_interface)/launch/pressure_interface.launch"/>
+    <include file="$(find controlbox_bridge)/launch/controlbox_bridge.launch"/>
 
     <!-- RQT GUI for publish topics -->
     <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"/>

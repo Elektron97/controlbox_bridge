@@ -7,17 +7,12 @@ import numpy as np
 import serial
 import struct
 
-## Global Variables
-DEFAULT_CHAMBERS	= 6		# Default number of chambers
-
 # Parameter for hardware setup 
+N_CHAMBERS = rospy.get_param('hardware_params/n_chambers')
 PMAX      = rospy.get_param('hardware_params/pmax')
 PMIN      = rospy.get_param('hardware_params/pmin')
 MAX_DIGIT = rospy.get_param('hardware_params/digit_max')
 MIN_DIGIT = rospy.get_param('hardware_params/digit_min')
-
-# Safe Saturation
-P_SAFE 	= 1.0
 
 # Serial Communication
 BAUDRATE = rospy.get_param('serial_params/baudrate')
@@ -31,14 +26,13 @@ topic_name = '/pressures'
 class ChamberException(Exception):
 	pass
 
-class Pressure_Interface(object):
-    
-	def __init__(self, n_chambers = DEFAULT_CHAMBERS):     
+class Pressure_Interface(object): 
+	def __init__(self):
 		# Arduino Obj
 		self.arduino = self.set_communication()
 		
 		# Parameters of the class
-		self.n_chambers = n_chambers
+		self.n_chambers = N_CHAMBERS
 
 		# Define Pressure Array
 		self.pressures = [0.0]*self.n_chambers
@@ -48,7 +42,6 @@ class Pressure_Interface(object):
 
 		# Define Pub/Sub objects
 		self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback)
-
 
 	def set_communication(self):
 		try:
@@ -63,8 +56,7 @@ class Pressure_Interface(object):
 			arduino.close()
 			arduino.open()
 			print ("port was already open, was closed and opened again!")
-		return arduino
-	
+		return arduino	
  
 	def write_pressure(self, pressures):
 		#########################################################
@@ -73,8 +65,8 @@ class Pressure_Interface(object):
 		# due to the callback or other types of interruptions.	#
 		#########################################################
   
-		# Saturatiom & Convert in Digit (10-255 | 10-4095)
-		digit_pressures = self.bar2digit(self.safe_saturation(pressures))
+		# Saturation & Convert in Digit
+		digit_pressures = self.bar2digit(self.saturation(pressures))
   
 		# Add syncbyte & create packet
 		packet = np.array([SYNCBYTE] + digit_pressures, dtype = np.uint8)
@@ -83,47 +75,23 @@ class Pressure_Interface(object):
 			for value in packet: # Sending Data
 				s = struct.pack('!{0}B'.format(len(packet)), *packet)
 				self.arduino.write(s)
- 
-	def saturation(self, pressures):		
+
+	def saturation(self, pressures, pmax = PMAX, pmin = PMIN):		
 		# Safe Saturation
 		for i in range(len(pressures)):
-
 			# Saturation on max value
-			if pressures[i] > PMAX[i]:
+			if pressures[i] > pmax[i]:
 				rospy.logwarn("Commanded Pressures higher than the Max Pressure. Saturating...")
-				pressures[i] = PMAX[i]
+				pressures[i] = pmax[i]
 
 			# Deadzone
-			elif pressures[i] < PMIN[i]:
+			elif pressures[i] < pmin[i]:
 				rospy.logwarn("Commanded Pressures lower than the Min Pressure. Saturating...")
-				pressures[i] = PMIN[i]
+				pressures[i] = pmin[i]
 				
 			else:
 				pass
-
 		return pressures
-
- 
-	def safe_saturation(self, pressures):		
-		# Safe Saturation
-		for i in range(len(pressures)):
-
-			# Saturation on max value
-			if pressures[i] > P_SAFE:
-				rospy.logwarn("Commanded Pressures higher than the Max Pressure. Saturating...")
-				pressures[i] = P_SAFE
-
-			# Deadzone
-			elif pressures[i] < 0:
-				rospy.logwarn("Commanded Pressures lower than the Min Pressure. Saturating...")
-				pressures[i] = 0
-				
-			else:
-				pass
-
-		return pressures
-
-
 
 	def pressure_callback(self, msg):
 		# Log
@@ -136,30 +104,27 @@ class Pressure_Interface(object):
 			else:
 				self.pressures = list(msg.data)
 		except ChamberException:
-			rospy.logerr("The length of the message ({}) is not consinstent with the number of chambers ({}).".format(len(msg.data), self.n_chambers))
+			rospy.logerr("The length of the message ({}) is not consinstent with the declared number of chambers ({}).".format(len(msg.data), self.n_chambers))
 
 		# Send to Arduino
 		self.write_pressure(self.pressures)
-	
- 
  
 	def __del__(self):
-     
 		# Set to 0 Pressure Array
 		self.pressures = [0.0]*self.n_chambers
 		# Put to 0 every chambers
 		self.write_pressure(self.pressures)
   
+		# Close Arduino Communication
 		if self.arduino:
 			self.arduino.close()
     
+		# Unregister subscription
 		if self.sub_obj:
 			self.sub_obj.unregister()
 
 		print("Object destroyed succesfully! ")
 		
-
-
 	def bar2digit(self, bar):
      
 		#####################################################################

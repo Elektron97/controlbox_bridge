@@ -1,4 +1,6 @@
 hardware_params:
+  n_chambers: 6
+
   pmax:
     - 1.36
     - 1.36

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Params -->
+    <rosparam command="load" file="$(find controlbox_bridge)/config/hardware_params.yaml"/>
+    <rosparam command="load" file="$(find controlbox_bridge)/config/serial_com.yaml"/>
+
+    <!-- /// Nodes /// -->
+    <!-- Launch Arduino Interface -->
+    <node pkg="controlbox_bridge" type="main.py" name="arduino_interface" output="screen"/>
+</launch>
