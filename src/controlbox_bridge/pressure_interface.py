@@ -23,6 +23,8 @@ SYNCBYTE = rospy.get_param('serial_params/syncbyte')
 # Topic Names
 topic_name = '/pressures'
 
+BAR2DIGIT = 8.69
+
 class ChamberException(Exception):
 	pass
 
@@ -39,9 +41,13 @@ class Pressure_Interface(object):
 		
   		# Put to 0 every chambers
 		self.write_pressure(self.pressures)
+		rospy.sleep(1.0)	# wait 1 s
 
 		# Define Pub/Sub objects
 		self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback)
+
+		# Instead of the deconstructor
+		rospy.on_shutdown(self.shutdown_hook)
 
 	def set_communication(self):
 		try:
@@ -67,6 +73,9 @@ class Pressure_Interface(object):
   
 		# Saturation & Convert in Digit
 		digit_pressures = self.bar2digit(self.saturation(pressures))
+
+		## Debug
+		# digit_pressures = pressures.copy()
   
 		# Add syncbyte & create packet
 		packet = np.array([SYNCBYTE] + digit_pressures, dtype = np.uint8)
@@ -108,22 +117,24 @@ class Pressure_Interface(object):
 
 		# Send to Arduino
 		self.write_pressure(self.pressures)
- 
-	def __del__(self):
-		# Set to 0 Pressure Array
-		self.pressures = [0.0]*self.n_chambers
-		# Put to 0 every chambers
-		self.write_pressure(self.pressures)
-  
-		# Close Arduino Communication
-		if self.arduino:
+
+	def shutdown_hook(self):
+		rospy.loginfo("Shutting down pressure interface...")
+
+		# Set pressures to zero
+		zero_pressures = [0.0] * self.n_chambers
+		self.write_pressure(zero_pressures)
+
+		# Close Arduino connection
+		if self.arduino and self.arduino.isOpen():
 			self.arduino.close()
-    
-		# Unregister subscription
+			rospy.loginfo("Serial port closed.")
+
+		# Unregister subscriber
 		if self.sub_obj:
 			self.sub_obj.unregister()
+			rospy.loginfo("Subscriber unregistered.")
 
-		print("Object destroyed succesfully! ")
 		
 	def bar2digit(self, bar):
      
