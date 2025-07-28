@@ -74,7 +74,7 @@ class Pressure_Interface(object):
 		# Saturation & Convert in Digit
 		digit_pressures = self.bar2digit(self.saturation(pressures))
 
-		## Debug
+		# # Debug
 		# digit_pressures = pressures.copy()
   
 		# Add syncbyte & create packet
