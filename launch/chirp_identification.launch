@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Define path for bags -->
+    <arg name="bag_path" default="$(env HOME)/bagfiles/amisupport"/>
+    <arg name="exp_name" default="chirp"/>
+
+    <!-- Pressure Interface Launch File -->
+    <include file="$(find controlbox_bridge)/launch/controlbox_bridge.launch"/>
+
+    <!-- Vicon Bridge -->
+    <include file="$(find vicon_bridge)/launch/vicon.launch"/>
+
+    <!-- Camera Stream -->
+    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="enable_depth" value="false"/>
+        <arg name="color_fps" value="15"/>
+        <arg name="color_width" value="1280"/>
+        <arg name="color_height" value="720"/>
+    </include> -->
+    
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="enable_depth" value="false"/>
+    </include>
+
+    <!-- Rosbag Recorder -->
+    <include file="$(find rosbag_recorder)/launch/recording_manager.launch">
+        <arg name="recorded_topics" value="['/camera/color/image_raw/compressed',
+                                            '/pressures',
+                                            '/tf',
+                                            '/tf_static',
+                                            'vicon/markers',
+                                            '/vicon/AMSupport/base',
+                                            '/vicon/AMSupport/tip']"/>
+        <arg name="target_folder" value="$(arg bag_path)"/>
+        <arg name="filename_prefix" value="$(arg exp_name)"/>
+    </include>
+
+    <!-- RQT GUI for publish topics -->
+    <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui"/>
+</launch>

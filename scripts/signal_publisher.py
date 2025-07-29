@@ -6,14 +6,16 @@ from std_srvs.srv import Empty, EmptyResponse
 import threading
 import time
 
-DEFAULT_ALPHA = 1.0
-DEFAULT_RATE = 100.0
+DEFAULT_ALPHA = 0.005
+DEFAULT_RATE = 1000.0
+DEFAULT_AMPLITUDE = 4.0
 
 class ChirpPublisher:
     def __init__(self):
         self.pub = rospy.Publisher('/pressures', Float32MultiArray, queue_size=10)
         self.alpha = rospy.get_param('~alpha', DEFAULT_ALPHA)
         self.rate_hz = rospy.get_param('~rate', DEFAULT_RATE)
+        self.amplitude = rospy.get_param('~amplitude', DEFAULT_AMPLITUDE)
         self.running = False
         self.lock = threading.Lock()
         self.thread = threading.Thread(target=self.publish_loop)
@@ -47,9 +49,15 @@ class ChirpPublisher:
                 if self.running and self.start_time is not None:
                     t = (rospy.Time.now() - self.start_time).to_sec()
                     f_t = self.alpha * t
+
+                    ## Saturation of the Frequency
+                    if f_t > self.rate_hz:
+                        f_t = self.rate_hz/4.0
+                        rospy.logwarn("Frequency saturated at %f Hz", f_t)
+
                     y = np.sin(2 * np.pi * f_t * t)
                     msg = Float32MultiArray()
-                    msg.data = [np.sin(2 * np.pi * f_t * t + i * 2 * np.pi / 7) for i in range(7)]
+                    msg.data = [self.amplitude * np.abs(np.sin(2 * np.pi * f_t * t + i * 2 * np.pi / 7)) for i in range(7)]
 
                     self.pub.publish(msg)
             rate.sleep()
