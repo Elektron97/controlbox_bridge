@@ -2,13 +2,14 @@
 import rospy
 import numpy as np
 from std_msgs.msg import Float32MultiArray
-from std_srvs.srv import Empty, EmptyResponse
+from std_srvs.srv import Trigger, TriggerResponse
 import threading
 import time
 
-DEFAULT_ALPHA = 0.005
-DEFAULT_RATE = 1000.0
-DEFAULT_AMPLITUDE = 4.0
+DEFAULT_ALPHA = 0.01
+DEFAULT_RATE = 100.0
+DEFAULT_AMPLITUDE = 3.5
+N_MOTORS = 3
 
 class ChirpPublisher:
     def __init__(self):
@@ -23,24 +24,33 @@ class ChirpPublisher:
         self.thread.start()
 
         # Services
-        self.start_srv = rospy.Service('/start_chirp', Empty, self.start_callback)
-        self.stop_srv = rospy.Service('/stop_chirp', Empty, self.stop_callback)
+        self.start_srv = rospy.Service('/start', Trigger, self.start_callback)
+        self.stop_srv = rospy.Service('/stop', Trigger, self.stop_callback)
 
     def start_callback(self, req):
         rospy.loginfo("Chirp start requested. Resetting time after 1 second...")
         with self.lock:
-            self.start_time = None  # Will be set inside loop after sleep
+            self.start_time = None
             self.running = True
-        time.sleep(1.0)
+        rospy.sleep(1.0)
         with self.lock:
             self.start_time = rospy.Time.now()
-        return EmptyResponse()
+        return TriggerResponse(success=True, message="Chirp started.")
 
     def stop_callback(self, req):
         rospy.loginfo("Chirp stop requested.")
+
         with self.lock:
             self.running = False
-        return EmptyResponse()
+
+        # Publish one last message of zeros
+        zero_msg = Float32MultiArray()
+        zero_msg.data = [0.0] * 7
+        self.pub.publish(zero_msg)
+        rospy.loginfo("Published zero message after stopping chirp.")
+        rospy.sleep(0.1)  # Ensure the message is sent before returning
+
+        return TriggerResponse(success=True, message="Chirp stopped and zero message published.")
 
     def publish_loop(self):
         rate = rospy.Rate(self.rate_hz)
@@ -55,9 +65,9 @@ class ChirpPublisher:
                         f_t = self.rate_hz/4.0
                         rospy.logwarn("Frequency saturated at %f Hz", f_t)
 
-                    y = np.sin(2 * np.pi * f_t * t)
                     msg = Float32MultiArray()
-                    msg.data = [self.amplitude * np.abs(np.sin(2 * np.pi * f_t * t + i * 2 * np.pi / 7)) for i in range(7)]
+                    # msg.data = [self.amplitude * np.abs(np.sin(2 * np.pi * f_t * t + i * 2 * np.pi / N_MOTORS)) for i in range(N_MOTORS)]
+                    msg.data = [self.amplitude * np.abs(np.sin(2 * np.pi * f_t * t + i * 2 * np.pi / N_MOTORS)) for i in range(N_MOTORS)] + [0.0] * (7 - N_MOTORS)
 
                     self.pub.publish(msg)
             rate.sleep()
