@@ -23,8 +23,6 @@ SYNCBYTE = rospy.get_param('serial_params/syncbyte')
 # Topic Names
 topic_name = '/pressures'
 
-BAR2DIGIT = 8.69
-
 class ChamberException(Exception):
 	pass
 
