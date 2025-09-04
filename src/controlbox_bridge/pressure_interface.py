@@ -11,6 +11,7 @@ import struct
 N_CHAMBERS = rospy.get_param('hardware_params/n_chambers')
 PMAX      = rospy.get_param('hardware_params/pmax')
 PMIN      = rospy.get_param('hardware_params/pmin')
+P_SAFETY  = rospy.get_param('hardware_params/p_safety')
 MAX_DIGIT = rospy.get_param('hardware_params/digit_max')
 MIN_DIGIT = rospy.get_param('hardware_params/digit_min')
 
@@ -70,10 +71,7 @@ class Pressure_Interface(object):
 		#########################################################
   
 		# Saturation & Convert in Digit
-		digit_pressures = self.bar2digit(self.saturation(pressures))
-
-		# # Debug
-		# digit_pressures = pressures.copy()
+		digit_pressures = self.bar2digit(self.saturation(pressures, pmax = P_SAFETY, pmin = PMIN)) # Saturation between 0 and 1 bar
   
 		# Add syncbyte & create packet
 		packet = np.array([SYNCBYTE] + digit_pressures, dtype = np.uint8)
