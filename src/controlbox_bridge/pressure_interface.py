@@ -61,7 +61,7 @@ class Pressure_Interface(object):
 			arduino.close()
 			arduino.open()
 			print ("port was already open, was closed and opened again!")
-		return arduino	
+		return arduino
  
 	def write_pressure(self, pressures):
 		#########################################################
