@@ -1,0 +1,12 @@
+controlbox_bridge_node:
+  ros__parameters:
+    baudrate: 115200
+    timeout:  0.1
+    port:     "/dev/ttyACM0"
+    syncbyte: 106
+    n_chambers: 9
+    p_max: [1.68, 1.68, 1.68, 1.68, 1.68, 1.68, 4.0, 4.0, 1.0]
+    p_min: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    digit_max: [255, 255, 255, 255, 255, 255, 255, 255, 4095]
+    digit_min: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+

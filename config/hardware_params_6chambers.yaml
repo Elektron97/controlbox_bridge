@@ -1,4 +1,4 @@
-hardware_params:
+ros__parameters:
   n_chambers: 6
 
   pmax:

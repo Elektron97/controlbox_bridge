@@ -1,4 +1,5 @@
-serial_params:
+controlbox_bridge_node:
+ ros__parameters:
   baudrate: 115200
   timeout:  0.1
   port:     "/dev/ttyACM0"
