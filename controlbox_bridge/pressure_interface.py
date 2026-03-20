@@ -16,11 +16,11 @@ class PressureInterface(Node):
 
         # Declare parameters
         ## hardware setup 
-        self.declare_parameter('n_chambers', 9)
-        self.declare_parameter('p_max', [1.0]*9)
-        self.declare_parameter('p_min', [0.0]*9)
-        self.declare_parameter('digit_max', [255]*9)
-        self.declare_parameter('digit_min', [0]*9)
+        self.declare_parameter('n_chambers', 8)
+        self.declare_parameter('p_max', [1.0]*8)
+        self.declare_parameter('p_min', [0.0]*8)
+        self.declare_parameter('digit_max', [255]*8)
+        self.declare_parameter('digit_min', [0]*8)
 
         ## serial communication
         self.declare_parameter('baudrate', 115200)
@@ -165,7 +165,7 @@ class PressureInterface(Node):
             
             self.pressures = list(msg.data)
             self.write_pressure(self.pressures)
-            self.get_logger().debug(f"Set pressures to: {self.pressures}")
+            self.get_logger().info(f"Set pressures to: {self.pressures}")
 
         except ChamberException as e:
             self.get_logger().error(str(e))
