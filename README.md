@@ -19,6 +19,26 @@ catkin_make
 ```
 5. Update the [hardware parameters](config/hardware_params.yaml) file for your specific control box. Usually, you can measure them by **digital pressure gauge**.
 
+## Troubleshooting
+If you're using WSL2 and encout an error such as 
+```bash
+PS C:\WINDOWS\system32> usbipd attach --wsl --busid 1-1
+usbipd: info: Using WSL distribution 'Ubuntu-20.04' to attach; the device will be available in all WSL 2 distributions.
+usbipd: info: Loading vhci_hcd module.
+usbipd: error: Loading vhci_hcd failed.
+```
+
+The solution is to run in Ubuntu:
+```bash
+sudo modprobe vhci-hcd
+```
+
+Furthermore, if `dev/ttyACM0` does not appear, type:
+```bash
+ sudo modprobe cdc_acm
+```
+
+
 ## Usage
 To launch the bridge node
 ```bash
