@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- USB Port for Joystick -->
+    <param name="joy_node/dev" type="string" value="/dev/input/js0"/>
+
+    <!-- /// Nodes /// -->
+    <!-- Pressure Interface Launch File -->
+    <include file="$(find controlbox_bridge)/launch/controlbox_bridge.launch"/>
+
+    <!-- Joy -->
+    <node name="joy" pkg="joy" type="joy_node"/>
+
+    <!-- // Open-Loop Controller // -->
+    <node pkg="controlbox_bridge" type="controller" name="controller" output="screen"/>
+</launch>
