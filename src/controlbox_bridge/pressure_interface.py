@@ -1,8 +1,5 @@
-### Pressure Interface Class ###
-
 import rospy
 from std_msgs.msg import Float32MultiArray
-
 import numpy as np
 import serial
 import struct
@@ -26,127 +23,109 @@ PSAFE = 3.0
 topic_name = '/pressures'
 
 class ChamberException(Exception):
-	pass
+    pass
 
 class Pressure_Interface(object): 
-	def __init__(self):
-		# Arduino Obj
-		self.arduino = self.set_communication()
-		
-		# Parameters of the class
-		self.n_chambers = N_CHAMBERS
-
-		# Define Pressure Array
-		self.pressures = [0.0]*self.n_chambers
-		
-  		# Put to 0 every chambers
-		self.write_pressure(self.pressures)
-
-		# Define Pub/Sub objects
-		self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback, queue_size=1)
-
-	def set_communication(self):
-		try:
-			arduino = serial.Serial( # set parameters, in fact use your own :-)
-				port=PORT,
-				baudrate=BAUDRATE,
-				timeout=TIMEOUT
-			)
-			arduino.isOpen() # try to open port, if possible print message
-			print ("port is opened!")
-		except IOError: # if port is already opened, close it and open it again and print message
-			arduino.close()
-			arduino.open()
-			print ("port was already open, was closed and opened again!")
-		return arduino	
- 
-	def write_pressure(self, pressures):
-		#########################################################
-		# We pass "pressures" to avoid changes					#
-		# during the execution of the methods,					#
-		# due to the callback or other types of interruptions.	#
-		#########################################################
-  
-		# Saturation & Convert in Digit
-		digit_pressures = self.bar2digit(self.saturation(pressures, pmax=[PSAFE]*self.n_chambers))
-		# digit_pressures=pressures.copy()
-		# Add syncbyte & create packet
-		packet = np.array([SYNCBYTE] + digit_pressures, dtype = np.uint8)
-
-		if self.arduino.isOpen():
-			for value in packet: # Sending Data
-				s = struct.pack('!{0}B'.format(len(packet)), *packet)
-				self.arduino.write(s)
-
-	def saturation(self, pressures, pmax = PMAX, pmin = PMIN):		
-		# Safe Saturation
-		for i in range(len(pressures)):
-			# Saturation on max value
-			if pressures[i] > pmax[i]:
-				rospy.logwarn("Commanded Pressures higher than the Max Pressure. Saturating...")
-				pressures[i] = pmax[i]
-
-			# Deadzone
-			elif pressures[i] < pmin[i]:
-				rospy.logwarn("Commanded Pressures lower than the Min Pressure. Saturating...")
-				pressures[i] = pmin[i]
-				
-			else:
-				pass
-		return pressures
-
-	def pressure_callback(self, msg):
-		# Log
-		rospy.loginfo("Writing in the Arduino the commanded pressures...")
-  
-  		# Extract Data
-		try:
-			if not self.n_chambers == len(msg.data):
-				raise ChamberException
-			else:
-				self.pressures = list(msg.data)
-		except ChamberException:
-			rospy.logerr("The length of the message ({}) is not consinstent with the declared number of chambers ({}).".format(len(msg.data), self.n_chambers))
-
-		# Send to Arduino
-		self.write_pressure(self.pressures)
- 
-	def __del__(self):
-		# Set to 0 Pressure Array
-		self.pressures = [0.0]*self.n_chambers
-		# Put to 0 every chambers
-		self.write_pressure(self.pressures)
-  
-		# Close Arduino Communication
-		if self.arduino:
-			self.arduino.close()
-    
-		# Unregister subscription
-		if self.sub_obj:
-			self.sub_obj.unregister()
-
-		print("Object destroyed succesfully! ")
-		
-	def bar2digit(self, bar):
-     
-		#####################################################################
-		# 																	#
-		#			Function to convert the pressure from bar to digit:		#
-		#																	#
-		#	p_digit = (max_digit - min_digit) * (p / max_bar) + min_digit	#
-		#																	#
-		#				p_digit 	= pressure value in digit				#
-		#				p 			= pressure value in bar					#
-		# 				max_digit 	= max value of pressure in digit		#
-		# 				min_digit	= min value of pressure in digit		#
-		#				max_bar		= max value of pressure in bar			#
-		#				int() = function to convert from double to int  	#
-		#																	#
-		#####################################################################
-		digit = []		
-  
-		for i in range(self.n_chambers):
-			digit.append(int((MAX_DIGIT[i] - MIN_DIGIT[i]) * (bar[i] / PMAX[i]) + MIN_DIGIT[i]))
+    def __init__(self):
+        # Arduino Obj
+        self.arduino = self.set_communication()
         
-		return digit
+        # Parameters of the class
+        self.n_chambers = N_CHAMBERS
 
+        # Define Pressure Array
+        self.pressures = [0.0] * self.n_chambers
+        
+        # Put to 0 every chamber
+        self.write_pressure(self.pressures)
+
+        # Define Pub/Sub objects
+        self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback)
+
+    def set_communication(self):
+        try:
+            arduino = serial.Serial(
+                port=PORT,
+                baudrate=BAUDRATE,
+                timeout=TIMEOUT
+            )
+            arduino.isOpen() 
+            print("port is opened!")
+        except IOError: 
+            arduino.close()
+            arduino.open()
+            print("port was already open, was closed and opened again!")
+        return arduino  
+ 
+    def write_pressure(self, pressures):
+        # Saturation & Convert in Digit
+        digit_pressures = self.bar2digit(self.saturation(pressures))
+  
+        # Add syncbyte & create packet
+        packet = np.array([SYNCBYTE] + digit_pressures, dtype=np.uint8)
+
+        if self.arduino.isOpen():
+            for value in packet: # Sending Data
+                s = struct.pack('!{0}B'.format(len(packet)), *packet)
+                self.arduino.write(s)
+
+    def saturation(self, pressures, pmax=PMAX, pmin=PMIN):      
+        # Safe Saturation
+        for i in range(len(pressures)):
+            # Saturation on max value
+            if pressures[i] > pmax[i]:
+                rospy.logwarn_throttle(1.0, "Commanded Pressures higher than the Max Pressure. Saturating...")
+                pressures[i] = pmax[i]
+
+            # Deadzone
+            elif pressures[i] < pmin[i]:
+                rospy.logwarn_throttle(1.0, "Commanded Pressures lower than the Min Pressure. Saturating...")
+                pressures[i] = pmin[i]
+        return pressures
+
+    def pressure_callback(self, msg):
+        # Log
+        rospy.loginfo_throttle(1.0, "Writing in the Arduino the commanded pressures...")
+  
+        # Extract Data
+        try:
+            if not self.n_chambers == len(msg.data):
+                raise ChamberException
+            else:
+                self.pressures = list(msg.data)
+        except ChamberException:
+            rospy.logerr("The length of the message ({}) is not consistent with the declared number of chambers ({}).".format(len(msg.data), self.n_chambers))
+
+        # Send to Arduino
+        self.write_pressure(self.pressures)
+ 
+    # --> FIXED INDENTATION HERE <--
+    def shutdown_hook(self):
+        rospy.loginfo("ROS Shutdown initiated. Safely turning off hardware...")
+        
+        try:
+            # Set to 0 Pressure Array
+            self.pressures = [0.0] * self.n_chambers
+            # Put to 0 every chamber
+            self.write_pressure(self.pressures)
+            rospy.loginfo("Hardware pressures set to safe state (0.0).")
+        except Exception as e:
+            rospy.logerr("Failed to send zero pressures during shutdown: {}".format(e))
+
+        # Close Arduino Communication safely
+        if hasattr(self, 'arduino') and self.arduino:
+            if self.arduino.isOpen():
+                self.arduino.close()
+                rospy.loginfo("Arduino serial communication closed.")
+        
+        # Unregister subscription
+        if hasattr(self, 'sub_obj') and self.sub_obj:
+            self.sub_obj.unregister()
+
+        rospy.loginfo("Pressure Interface object destroyed successfully!")
+        
+    def bar2digit(self, bar):
+        digit = []      
+        for i in range(self.n_chambers):
+            digit.append(int((MAX_DIGIT[i] - MIN_DIGIT[i]) * (bar[i] / PMAX[i]) + MIN_DIGIT[i]))
+        return digit
