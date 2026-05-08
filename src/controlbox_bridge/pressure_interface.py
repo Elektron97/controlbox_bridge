@@ -17,6 +17,8 @@ TIMEOUT  = rospy.get_param('serial_params/timeout')
 PORT     = rospy.get_param('serial_params/port')
 SYNCBYTE = rospy.get_param('serial_params/syncbyte')
 
+PSAFE = 3.0
+
 # Topic Names
 topic_name = '/pressures'
 
