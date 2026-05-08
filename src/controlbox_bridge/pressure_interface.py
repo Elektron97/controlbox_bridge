@@ -20,6 +20,8 @@ TIMEOUT  = rospy.get_param('serial_params/timeout')
 PORT     = rospy.get_param('serial_params/port')
 SYNCBYTE = rospy.get_param('serial_params/syncbyte')
 
+PSAFE = 3.0
+
 # Topic Names
 topic_name = '/pressures'
 
@@ -41,7 +43,7 @@ class Pressure_Interface(object):
 		self.write_pressure(self.pressures)
 
 		# Define Pub/Sub objects
-		self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback)
+		self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback, queue_size=1)
 
 	def set_communication(self):
 		try:
@@ -66,8 +68,8 @@ class Pressure_Interface(object):
 		#########################################################
   
 		# Saturation & Convert in Digit
-		digit_pressures = self.bar2digit(self.saturation(pressures))
-  
+		digit_pressures = self.bar2digit(self.saturation(pressures, pmax=[PSAFE]*self.n_chambers))
+		# digit_pressures=pressures.copy()
 		# Add syncbyte & create packet
 		packet = np.array([SYNCBYTE] + digit_pressures, dtype = np.uint8)
 
