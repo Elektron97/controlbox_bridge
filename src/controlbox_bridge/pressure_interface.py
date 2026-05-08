@@ -28,20 +28,20 @@ class ChamberException(Exception):
 
 class Pressure_Interface(object): 
 	def __init__(self):
-		# Arduino Obj
-		self.arduino = self.set_communication()
-		
-		# Parameters of the class
-		self.n_chambers = N_CHAMBERS
+			# Arduino Obj
+			self.arduino = self.set_communication()
+			
+			# Parameters of the class
+			self.n_chambers = N_CHAMBERS
 
-		# Define Pressure Array
-		self.pressures = [0.0]*self.n_chambers
-		
-  		# Put to 0 every chambers
-		self.write_pressure(self.pressures)
+			# Define Pressure Array
+			self.pressures = [0.0]*self.n_chambers
+			
+			# Put to 0 every chambers
+			self.write_pressure(self.pressures)
 
-		# Define Pub/Sub objects
-		self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback)
+			# Define Pub/Sub objects
+			self.sub_obj = rospy.Subscriber(topic_name, Float32MultiArray, self.pressure_callback)
 
 	def set_communication(self):
 		try:
@@ -109,21 +109,29 @@ class Pressure_Interface(object):
 		# Send to Arduino
 		self.write_pressure(self.pressures)
  
-	def __del__(self):
-		# Set to 0 Pressure Array
-		self.pressures = [0.0]*self.n_chambers
-		# Put to 0 every chambers
-		self.write_pressure(self.pressures)
-  
-		# Close Arduino Communication
-		if self.arduino:
-			self.arduino.close()
-    
-		# Unregister subscription
-		if self.sub_obj:
-			self.sub_obj.unregister()
+		def shutdown_hook(self):
+			rospy.loginfo("ROS Shutdown initiated. Safely turning off hardware...")
+			
+			try:
+				# Set to 0 Pressure Array
+				self.pressures = [0.0] * self.n_chambers
+				# Put to 0 every chamber
+				self.write_pressure(self.pressures)
+				rospy.loginfo("Hardware pressures set to safe state (0.0).")
+			except Exception as e:
+				rospy.logerr("Failed to send zero pressures during shutdown: {}".format(e))
+	
+			# Close Arduino Communication safely
+			if hasattr(self, 'arduino') and self.arduino:
+				if self.arduino.isOpen():
+					self.arduino.close()
+					rospy.loginfo("Arduino serial communication closed.")
+		
+			# Unregister subscription
+			if hasattr(self, 'sub_obj') and self.sub_obj:
+				self.sub_obj.unregister()
 
-		print("Object destroyed succesfully! ")
+			rospy.loginfo("Pressure Interface object destroyed successfully!")
 		
 	def bar2digit(self, bar):
      

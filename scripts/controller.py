@@ -9,7 +9,10 @@ from std_msgs.msg import Float32MultiArray
 # CONFIGURATION & CONSTANTS
 # ==========================================
 N_MOTORS = 6
-MOTOR_SF = 1.0  # Motor Scale Factor
+
+GAIN = 1.0
+MOTOR_SF = -(2.0 / 3.0) * math.sqrt(3.0)
+MOTOR_SF *= GAIN
 
 # Phases
 PHASE0 = 0.0
@@ -48,9 +51,24 @@ MOD2_D12, MOD2_D23, MOD2_D13 = precompute_phase_denominators(MOD2_P1, MOD2_P2, M
 # MATH UTILITY LIBRARY
 # ==========================================
 
+# def cartesian2Polar(x, y):
+#     """Converts Cartesian coordinates to Polar using optimized math.hypot."""
+#     return math.hypot(x, y), math.atan2(y, x) + math.pi
+
 def cartesian2Polar(x, y):
-    """Converts Cartesian coordinates to Polar using optimized math.hypot."""
-    return math.hypot(x, y), math.atan2(y, x) + math.pi
+    """
+    Converts Cartesian coordinates to Polar, applying Elliptical Grid Mapping 
+    to map a square joystick boundary into a perfect circle (max rho = 1.0).
+    """
+    # 1. Map the square coordinates to circular coordinates
+    x_circle = x * math.sqrt(1.0 - (y**2) / 2.0)
+    y_circle = y * math.sqrt(1.0 - (x**2) / 2.0)
+    
+    # 2. Calculate Polar coordinates using the mapped values
+    rho = math.hypot(x_circle, y_circle)
+    theta = math.atan2(y_circle, x_circle) + math.pi
+    
+    return rho, theta
 
 def map2motors_optimized(rho, theta, p1, p2, p3, d12, d23, d13):
     """Maps polar coordinates to motor commands using precomputed denominators."""
