@@ -18,7 +18,8 @@ catkin_python_setup()
 catkin_package()
 
 catkin_install_python(
-  PROGRAMS scripts/main.py
+  PROGRAMS scripts/main.py scripts/controller.py
+
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

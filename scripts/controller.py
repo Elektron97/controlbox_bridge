@@ -10,7 +10,7 @@ from std_msgs.msg import Float32MultiArray
 # ==========================================
 N_MOTORS = 6
 
-GAIN = 1.0
+GAIN = 3.0
 MOTOR_SF = -(2.0 / 3.0) * math.sqrt(3.0)
 MOTOR_SF *= GAIN
 
