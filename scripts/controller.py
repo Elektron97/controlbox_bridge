@@ -12,12 +12,14 @@ N_MOTORS = 6
 
 GAIN = 3.0
 MOTOR_SF = -(2.0 / 3.0) * math.sqrt(3.0)
-MOTOR_SF *= GAIN
+# MOTOR_SF *= GAIN
 
 # Phases
 PHASE0 = 0.0
 PHASE1 = 2.0 * math.pi / 3.0
 PHASE2 = 4.0 * math.pi / 3.0
+
+
 PHASE_DISP = math.pi / 6.0
 
 class JoystickAxes:
@@ -106,13 +108,13 @@ class ControlNode:
         self.turn_commands.data = [0.0] * N_MOTORS
 
         # Setup Publishers
-        self.pub_turns = rospy.Publisher('cmd_turns', Float32MultiArray, queue_size=10)
+        self.pub_turns = rospy.Publisher('/pressures', Float32MultiArray, queue_size=1)
 
         # Setup Subscriber (queue_size=1 drops old joystick inputs if the loop falls behind)
         self.sub_joy = rospy.Subscriber('joy', Joy, self.joy_callback, queue_size=1)
 
-        # Setup Main Loop Timer (50Hz / 0.02s)
-        self.timer = rospy.Timer(rospy.Duration(0.02), self.main_loop)
+        # Setup Main Loop Timer (10Hz / 0.1s)
+        self.timer = rospy.Timer(rospy.Duration(0.01), self.main_loop)
         
         rospy.loginfo("Control Node initialized.")
 
@@ -132,14 +134,14 @@ class ControlNode:
         # --- Update motor_cmd array in place ---
         # First Module (Indices 0, 1, 2)
         r1, r2, r3 = map2motors_optimized(
-            rho_left, theta_left, 
+            GAIN*rho_left, theta_left, 
             MOD1_P1, MOD1_P2, MOD1_P3, 
             MOD1_D12, MOD1_D23, MOD1_D13
         )
         
         # Second Module (Indices 3, 4, 5)
         r4, r5, r6 = map2motors_optimized(
-            rho_right, theta_right, 
+            GAIN*rho_right, theta_right, 
             MOD2_P1, MOD2_P2, MOD2_P3, 
             MOD2_D12, MOD2_D23, MOD2_D13
         )

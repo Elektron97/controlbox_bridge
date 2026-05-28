@@ -47,7 +47,8 @@ class Pressure_Interface(object):
 			arduino = serial.Serial( # set parameters, in fact use your own :-)
 				port=PORT,
 				baudrate=BAUDRATE,
-				timeout=TIMEOUT
+				timeout=TIMEOUT,
+				write_timeout=TIMEOUT
 			)
 			arduino.isOpen() # try to open port, if possible print message
 			print ("port is opened!")
@@ -55,22 +56,69 @@ class Pressure_Interface(object):
 			arduino.close()
 			arduino.open()
 			print ("port was already open, was closed and opened again!")
-		return arduino	
-
+		return arduino
+ 
+	# def write_pressure(self, pressures):
+	# 	press_copy = list(pressures)
+		
+	# 	# Saturazione & Conversione
+	# 	digit_pressures = self.bar2digit(self.saturation(press_copy, pmax=[PSAFE]*self.n_chambers))
+		
+	# 	if self.arduino.isOpen():
+	# 		try:
+	# 			# Creiamo il formato in modo dinamico
+	# 			pack_format = '!' + 'B' * (1 + self.n_chambers)
+	# 			s = struct.pack(pack_format, SYNCBYTE, *digit_pressures)
+				
+	# 			# IL TRUCCO È QUI: 
+	# 			# Svuota (elimina) tutti i vecchi comandi in attesa di essere spediti
+	# 			self.arduino.reset_output_buffer()
+				
+	# 			# Ora scrivi il nuovo comando, che sarà il primo e unico nella coda
+	# 			self.arduino.write(s)
+				
+	# 		except serial.SerialTimeoutException:
+	# 			rospy.logwarn_throttle(1.0, "Timeout in scrittura! Pacchetto scartato.")
+	# 		except serial.SerialException as e:
+	# 			rospy.logerr("Errore seriale: {}".format(e))
+ 
 	def write_pressure(self, pressures):
-                # Saturation & Convert in Digit
-		digit_pressures = self.bar2digit(self.saturation(pressures))
-
-		# Saturation & Convert in Digit
-		digit_pressures = self.bar2digit(self.saturation(pressures, pmax=[PSAFE]*self.n_chambers))
-		# digit_pressures=pressures.copy()
-		# Add syncbyte & create packet
-		packet = np.array([SYNCBYTE] + digit_pressures, dtype = np.uint8)
-
+		press_copy = list(pressures)
+		
+		# 1. Saturazione & Conversione 
+		digit_pressures = self.bar2digit(self.saturation(press_copy, pmax=[PSAFE]*self.n_chambers))
+		
+		# 2. PADDING (Assicuriamo che ci siano sempre ESATTAMENTE 7 byte di dati)
+		# Se abbiamo meno di 7 camere, riempiamo il resto con zeri (0)
+		while len(digit_pressures) < 7:
+			digit_pressures.append(0)
+			
+		# Se per sbaglio ne abbiamo più di 7, tronchiamo la lista
+		if len(digit_pressures) > 7:
+			digit_pressures = digit_pressures[:7]
+		
 		if self.arduino.isOpen():
-			for value in packet: # Sending Data
-				s = struct.pack('!{0}B'.format(len(packet)), *packet)
+			try:
+				# Il formato ora è SEMPRE 8 byte (1 Sync + 7 Dati)
+				# '!B' (Sync) + 'BBBBBBB' (7 Dati)
+				pack_format = '!BBBBBBBB' 
+				s = struct.pack(pack_format, SYNCBYTE, *digit_pressures)
+				
+				# 3. TIRIAMO LO SCIACQUONE (Salviamo Arduino dal blocco)
+				# Leggiamo e buttiamo via tutto quello che Arduino ci ha mandato con ardprintf
+				if self.arduino.in_waiting > 0:
+					self.arduino.reset_input_buffer()
+				
+				# Svuotiamo anche il buffer di uscita per evitare latenza
+				self.arduino.reset_output_buffer()
+				
+				# Invia il comando ad Arduino
 				self.arduino.write(s)
+				
+			except serial.SerialTimeoutException:
+				rospy.logwarn_throttle(1.0, "Timeout scrittura. Il buffer è pieno, salto il pacchetto.")
+			except serial.SerialException as e:
+				rospy.logerr("Errore seriale: {}".format(e))
 
 	def saturation(self, pressures, pmax = PMAX, pmin = PMIN):		
 		# Safe Saturation

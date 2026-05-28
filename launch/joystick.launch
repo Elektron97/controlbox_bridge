@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <!-- USB Port for Joystick -->
-    <param name="joy_node/dev" type="string" value="/dev/input/event0"/>
+    <param name="joy_node/dev" type="string" value="/dev/input/js0"/>
 
     <!-- /// Nodes /// -->
     <!-- Pressure Interface Launch File -->
