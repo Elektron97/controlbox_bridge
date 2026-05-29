@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Pressure Interface Launch File -->
+    <include file="$(find controlbox_bridge)/launch/controlbox_bridge.launch"/>
+
+    <!-- Signal Publisher -->
+    <!-- <node pkg="controlbox_bridge" type="signal_publisher.py" name="signal_publisher"/> -->
+    <node pkg="controlbox_bridge" type="square_wave.py" name="square_wave"/>
+</launch>
